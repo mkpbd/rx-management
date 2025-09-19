@@ -59,11 +59,11 @@
           </mat-form-field>
 
           <div class="filter-actions">
-            <button mat-raised-button color="primary" (click)="onFilterChange()">
+            <button mat-raised-button color="primary" (click)="onSearch()">
               <mat-icon>filter_list</mat-icon>
               Apply Filters
             </button>
-            <button mat-button (click)="clearFilters()">
+            <button mat-button (click)="onClearFilters()">
               <mat-icon>clear</mat-icon>
               Clear
             </button>
@@ -129,22 +129,22 @@
               <button mat-icon-button color="primary" (click)="onViewAppointment(appointment)" matTooltip="View Details">
                 <mat-icon>visibility</mat-icon>
               </button>
-              <button mat-icon-button color="primary" (click)="editAppointment(appointment)" matTooltip="Edit Appointment">
+              <button mat-icon-button color="primary" (click)="onEditAppointment(appointment)" matTooltip="Edit Appointment">
                 <mat-icon>edit</mat-icon>
               </button>
-              <button mat-icon-button color="accent" (click)="downloadPdf(appointment)" matTooltip="Download PDF">
+              <button mat-icon-button color="accent" (click)="onDownloadPDF(appointment)" matTooltip="Download PDF">
                 <mat-icon>download</mat-icon>
               </button>
               <button mat-icon-button color="primary" (click)="onEmailPrescription(appointment)" matTooltip="Send Email">
                 <mat-icon>email</mat-icon>
               </button>
-              <button mat-icon-button color="warn" (click)="deleteAppointment(appointment)" matTooltip="Delete Appointment">
+              <button mat-icon-button color="warn" (click)="onDeleteAppointment(appointment)" matTooltip="Delete Appointment">
                 <mat-icon>delete</mat-icon>
               </button>
             </td>
           </ng-container>
 
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-header-row *matHeaderRowDef="displayedColumns" mat-sort-header></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
         </table>
 

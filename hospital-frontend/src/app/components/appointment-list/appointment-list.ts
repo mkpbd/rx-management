@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
+import { MatSortModule, MatSort } from '@angular/material/sort';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -31,6 +32,7 @@ import { EmailDialogComponent } from '../email-dialog/email-dialog.component';
   imports: [
     CommonModule,
     MatTableModule,
+    MatSortModule,
     MatButtonModule,
     MatIconModule,
     MatFormFieldModule,
@@ -51,7 +53,8 @@ import { EmailDialogComponent } from '../email-dialog/email-dialog.component';
   styleUrls: ['./appointment-list.scss']
 })
 export class AppointmentListComponent {
-  displayedColumns: string[] = ['id', 'appointmentDate', 'patientName', 'doctorName', 'status', 'actions'];
+  @ViewChild(MatSort) sort!: MatSort;
+  displayedColumns: string[] = ['id', 'appointmentDate', 'patientName', 'doctorName', 'visitType', 'status', 'actions'];
   appointments: Appointment[] = [];
   dataSource = new MatTableDataSource<Appointment>([]);
   totalCount = 0;
@@ -75,11 +78,11 @@ export class AppointmentListComponent {
     private dialog: MatDialog
   ) {
     this.filterForm = this.fb.group({
-      search: [''],
-      status: ['All'],
-      doctor: [''],
-      dateFrom: [''],
-      dateTo: ['']
+      searchTerm: [''],
+      doctorId: [''],
+      visitType: [''],
+      fromDate: [''],
+      toDate: ['']
     });
 
     this.initializeData();
@@ -114,50 +117,8 @@ export class AppointmentListComponent {
     });
   }
 
-  onPageChange(event: any) {
-    this.currentPage = event.pageIndex;
-    this.pageSize = event.pageSize;
-    this.loadAppointments();
-  }
-
-  onSearch() {
-    this.currentPage = 0;
-    this.loadAppointments();
-  }
-
-  onClearFilters() {
-    this.filterForm.reset({
-      search: '',
-      status: 'All',
-      doctor: '',
-      dateFrom: '',
-      dateTo: ''
-    });
-    this.onSearch();
-  }
-
-  clearFilters() {
-    this.onClearFilters();
-  }
-
-  onFilterChange() {
-    this.onSearch();
-  }
-
-  editAppointment(appointment: any) {
-    this.onEditAppointment(appointment);
-  }
-
-  downloadPdf(appointment: any) {
-    this.onDownloadPDF(appointment);
-  }
-
-  deleteAppointment(appointment: any) {
-    this.onDeleteAppointment(appointment);
-  }
-
-  formatDate(date: Date): string {
-    return date.toLocaleDateString();
+  ngAfterViewInit() {
+    this.dataSource.sort = this.sort;
   }
 
   private loadAppointments() {
@@ -167,11 +128,11 @@ export class AppointmentListComponent {
     const filter: AppointmentFilter = {
       pageNumber: this.currentPage + 1,
       pageSize: this.pageSize,
-      searchTerm: formValue.search || '',
-      doctorId: formValue.doctor || undefined,
-      visitType: formValue.status !== 'All' ? formValue.status : undefined,
-      fromDate: formValue.dateFrom ? new Date(formValue.dateFrom) : undefined,
-      toDate: formValue.dateTo ? new Date(formValue.dateTo) : undefined
+      searchTerm: formValue.searchTerm || '',
+      doctorId: formValue.doctorId || undefined,
+      visitType: formValue.visitType || undefined,
+      fromDate: formValue.fromDate ? new Date(formValue.fromDate) : undefined,
+      toDate: formValue.toDate ? new Date(formValue.toDate) : undefined
     };
 
     this.appointmentService.getAppointments(filter).subscribe({
@@ -179,6 +140,10 @@ export class AppointmentListComponent {
         this.appointments = result.data;
         this.dataSource.data = this.appointments;
         this.totalCount = result.totalCount;
+        // Apply sort after data is loaded
+        if (this.sort) {
+          this.dataSource.sort = this.sort;
+        }
         this.isLoading = false;
       },
       error: (error) => {
@@ -322,5 +287,32 @@ export class AppointmentListComponent {
       case 'cancelled': return 'status-cancelled';
       default: return '';
     }
+  }
+
+  onSearch() {
+    this.currentPage = 0;
+    this.loadAppointments();
+  }
+
+  onClearFilters() {
+    this.filterForm.reset({
+      searchTerm: '',
+      doctorId: '',
+      visitType: '',
+      fromDate: '',
+      toDate: ''
+    });
+    this.onSearch();
+  }
+
+  onPageChange(event: any) {
+    this.currentPage = event.pageIndex;
+    this.pageSize = event.pageSize;
+    this.loadAppointments();
+  }
+
+  formatDate(date: Date): string {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString();
   }
 }
