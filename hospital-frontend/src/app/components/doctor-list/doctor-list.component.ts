@@ -165,7 +165,7 @@ import { filter } from 'rxjs/operators';
   styles: [`
     .doctor-list-container {
       padding: 24px;
-      max-width: 1200px;
+      max-width: 1400px;
       margin: 0 auto;
     }
 
@@ -179,12 +179,14 @@ import { filter } from 'rxjs/operators';
     .page-header h1 {
       margin: 0;
       color: #333;
-      font-size: 1.75rem;
+      font-size: 1.8rem;
       font-weight: 500;
     }
 
     .filter-card {
       margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border-radius: 10px;
     }
 
     .search-form {
@@ -203,7 +205,8 @@ import { filter } from 'rxjs/operators';
     }
 
     .table-card {
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border-radius: 10px;
     }
 
     .table-container {
@@ -309,7 +312,7 @@ export class DoctorListComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadDoctors();
-    
+
     // Subscribe to router events to reload data when navigating back to doctor list
     this.routerSubscription.add(
       this.router.events
