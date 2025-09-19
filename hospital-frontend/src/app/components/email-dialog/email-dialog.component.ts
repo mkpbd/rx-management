@@ -13,6 +13,7 @@ export interface EmailDialogData {
   patientName: string;
   doctorName: string;
   appointmentDate: Date;
+  patientEmail?: string;
 }
 
 export interface EmailRequest {
@@ -196,7 +197,7 @@ export class EmailDialogComponent {
     @Inject(MAT_DIALOG_DATA) public data: EmailDialogData
   ) {
     this.emailForm = this.fb.group({
-      toEmail: ['', [Validators.required, Validators.email]],
+      toEmail: [data.patientEmail || '', [Validators.required, Validators.email]],
       toName: [data.patientName]
     });
   }

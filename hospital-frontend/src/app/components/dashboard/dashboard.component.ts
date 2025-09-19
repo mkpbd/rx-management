@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,6 +10,7 @@ import { DoctorService } from '../../services/doctor.service';
 import { MedicineService } from '../../services/medicine.service';
 import { AppointmentService } from '../../services/appointment.service';
 import { AppointmentFilter } from '../../models/appointment.model';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
@@ -28,7 +29,7 @@ import { AppointmentFilter } from '../../models/appointment.model';
         <p>Welcome to the RX Hospital Management System</p>
       </div>
 
-      <div class="stats-grid" *ngIf="!isLoading && !hasConnectionError">
+      <div class="stats-grid" *ngIf="!isLoading">
         <mat-card class="stat-card patients-card">
           <mat-card-content>
             <div class="stat-content">
@@ -453,7 +454,7 @@ import { AppointmentFilter } from '../../models/appointment.model';
     }
   `]
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   totalPatients = 0;
   totalDoctors = 0;
   totalAppointments = 0;
@@ -462,6 +463,7 @@ export class DashboardComponent implements OnInit {
   hasConnectionError = false;
   retryCount = 0;
   readonly maxRetries = 3;
+  private routerSubscription = new Subscription();
 
   constructor(
     private router: Router,
@@ -473,6 +475,22 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit() {
     this.loadDashboardData();
+
+    // Subscribe to router events to reload data when navigating back to dashboard
+    this.routerSubscription.add(
+      this.router.events.subscribe(event => {
+        if (event instanceof NavigationEnd) {
+          if (event.url === '/dashboard' || event.urlAfterRedirects === '/dashboard') {
+            this.loadDashboardData();
+          }
+        }
+      })
+    );
+  }
+
+  ngOnDestroy() {
+    // Unsubscribe from all subscriptions to prevent memory leaks
+    this.routerSubscription.unsubscribe();
   }
 
   retryLoading() {

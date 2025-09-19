@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,6 +13,8 @@ import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { PatientService } from '../../services/patient.service';
 import { Patient } from '../../models/patient.model';
+import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-patient-list',
@@ -267,6 +269,7 @@ export class PatientListComponent implements OnInit {
   dataSource = new MatTableDataSource<Patient>([]);
   isLoading = false;
   searchForm: FormGroup;
+  private routerSubscription = new Subscription();
 
   constructor(
     private fb: FormBuilder,
@@ -281,6 +284,22 @@ export class PatientListComponent implements OnInit {
 
   ngOnInit() {
     this.loadPatients();
+
+    // Subscribe to router events to reload data when navigating back to patient list
+    this.routerSubscription.add(
+      this.router.events
+        .pipe(filter(event => event instanceof NavigationEnd))
+        .subscribe((event: NavigationEnd) => {
+          if (event.url === '/patients' || event.urlAfterRedirects === '/patients') {
+            this.loadPatients();
+          }
+        })
+    );
+  }
+
+  ngOnDestroy() {
+    // Unsubscribe from all subscriptions to prevent memory leaks
+    this.routerSubscription.unsubscribe();
   }
 
   loadPatients() {

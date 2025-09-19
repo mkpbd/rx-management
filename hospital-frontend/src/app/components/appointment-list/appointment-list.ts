@@ -1,6 +1,6 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, ViewChild, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatSortModule, MatSort } from '@angular/material/sort';
 import { MatButtonModule } from '@angular/material/button';
@@ -25,6 +25,8 @@ import { Appointment, AppointmentFilter } from '../../models/appointment.model';
 import { Patient } from '../../models/patient.model';
 import { Doctor } from '../../models/doctor.model';
 import { EmailDialogComponent } from '../email-dialog/email-dialog.component';
+import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-appointment-list',
@@ -52,7 +54,7 @@ import { EmailDialogComponent } from '../email-dialog/email-dialog.component';
   templateUrl: './appointment-list.html',
   styleUrls: ['./appointment-list.scss']
 })
-export class AppointmentListComponent {
+export class AppointmentListComponent implements OnDestroy {
   @ViewChild(MatSort) sort!: MatSort;
   displayedColumns: string[] = ['id', 'appointmentDate', 'patientName', 'doctorName', 'visitType', 'status', 'actions'];
   appointments: Appointment[] = [];
@@ -61,6 +63,7 @@ export class AppointmentListComponent {
   pageSize = 10;
   currentPage = 0;
   isLoading = false;
+  private routerSubscription = new Subscription();
 
   filterForm: FormGroup;
   statuses = ['All', 'Scheduled', 'Completed', 'Cancelled'];
@@ -86,6 +89,22 @@ export class AppointmentListComponent {
     });
 
     this.initializeData();
+
+    // Subscribe to router events to reload data when navigating back to appointment list
+    this.routerSubscription.add(
+      this.router.events
+        .pipe(filter(event => event instanceof NavigationEnd))
+        .subscribe((event: NavigationEnd) => {
+          if (event.url === '/appointments' || event.urlAfterRedirects === '/appointments') {
+            this.loadAppointments();
+          }
+        })
+    );
+  }
+
+  ngOnDestroy() {
+    // Unsubscribe from all subscriptions to prevent memory leaks
+    this.routerSubscription.unsubscribe();
   }
 
   private initializeData() {

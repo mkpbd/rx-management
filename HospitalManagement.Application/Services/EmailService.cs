@@ -3,6 +3,7 @@ using MimeKit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using HospitalManagement.Application.Interfaces;
+using System.Text;
 
 namespace HospitalManagement.Application.Services
 {
@@ -10,15 +11,45 @@ namespace HospitalManagement.Application.Services
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger<EmailService> _logger;
+        private readonly bool _isDevelopment;
 
         public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
         {
             _configuration = configuration;
             _logger = logger;
+            
+            // Check multiple sources for development environment
+            var environment = _configuration["ASPNETCORE_ENVIRONMENT"] ?? 
+                             _configuration["DOTNET_ENVIRONMENT"] ?? 
+                             Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ??
+                             Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ??
+                             "Production";
+                             
+            _isDevelopment = string.Equals(environment, "Development", StringComparison.OrdinalIgnoreCase);
+            
+            // Log the environment for debugging
+            _logger.LogInformation("EmailService initialized. Environment: {Environment}, IsDevelopment: {IsDevelopment}", environment, _isDevelopment);
         }
 
         public async Task SendEmailWithAttachmentAsync(string toEmail, string toName, string subject, string body, byte[] attachmentData, string attachmentName, string attachmentMimeType = "application/pdf")
         {
+            _logger.LogInformation("SendEmailWithAttachmentAsync called. IsDevelopment: {IsDevelopment}", _isDevelopment);
+            
+            // In development mode, just log the email instead of sending it
+            if (_isDevelopment)
+            {
+                _logger.LogInformation("DEVELOPMENT MODE: Email would be sent to {ToEmail}", toEmail);
+                _logger.LogInformation("Subject: {Subject}", subject);
+                _logger.LogInformation("Body: {Body}", body);
+                _logger.LogInformation("Attachment: {AttachmentName} ({AttachmentSize} bytes)", attachmentName, attachmentData?.Length ?? 0);
+                
+                // Log the email content to a file for inspection
+                await LogEmailToFile(toEmail, toName, subject, body, attachmentData, attachmentName);
+                
+                _logger.LogInformation("Email logged successfully (not actually sent in development mode)");
+                return;
+            }
+
             try
             {
                 var message = new MimeMessage();
@@ -47,11 +78,25 @@ namespace HospitalManagement.Application.Services
                 var username = _configuration["EmailSettings:Username"];
                 var password = _configuration["EmailSettings:Password"];
 
+                _logger.LogInformation("Attempting to connect to SMTP server {SmtpServer}:{SmtpPort}", smtpServer, smtpPort);
+                
                 await client.ConnectAsync(smtpServer, smtpPort, MailKit.Security.SecureSocketOptions.StartTls);
                 
-                if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
+                // Check if authentication is required
+                if (client.Capabilities.HasFlag(MailKit.Net.Smtp.SmtpCapabilities.Authentication))
                 {
+                    if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+                    {
+                        _logger.LogWarning("SMTP server requires authentication but no credentials provided in configuration");
+                        throw new InvalidOperationException("SMTP server requires authentication but no credentials provided. Please configure email settings in appsettings.json");
+                    }
+                    
+                    _logger.LogInformation("Authenticating with SMTP server using username: {Username}", username);
                     await client.AuthenticateAsync(username, password);
+                }
+                else
+                {
+                    _logger.LogInformation("SMTP server does not require authentication");
                 }
 
                 await client.SendAsync(message);
@@ -62,7 +107,57 @@ namespace HospitalManagement.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to send email to {ToEmail} with subject {Subject}", toEmail, subject);
+                
+                // Provide more specific error messages
+                if (ex is InvalidOperationException && ex.Message.Contains("credentials"))
+                {
+                    throw new InvalidOperationException("Email service is not properly configured. Please contact system administrator.", ex);
+                }
+                
                 throw new InvalidOperationException($"Failed to send email: {ex.Message}", ex);
+            }
+        }
+
+        private async Task LogEmailToFile(string toEmail, string toName, string subject, string body, byte[] attachmentData, string attachmentName)
+        {
+            try
+            {
+                var logDirectory = Path.Combine(Directory.GetCurrentDirectory(), "logs");
+                if (!Directory.Exists(logDirectory))
+                {
+                    Directory.CreateDirectory(logDirectory);
+                }
+
+                var logFileName = $"email_{DateTime.Now:yyyyMMdd_HHmmss}.html";
+                var logFilePath = Path.Combine(logDirectory, logFileName);
+
+                var emailContent = new StringBuilder();
+                emailContent.AppendLine($"<html><head><title>Email Log - {subject}</title></head><body>");
+                emailContent.AppendLine($"<h1>Email Log</h1>");
+                emailContent.AppendLine($"<p><strong>To:</strong> {toName} &lt;{toEmail}&gt;</p>");
+                emailContent.AppendLine($"<p><strong>Subject:</strong> {subject}</p>");
+                emailContent.AppendLine($"<p><strong>Timestamp:</strong> {DateTime.Now:yyyy-MM-dd HH:mm:ss}</p>");
+                emailContent.AppendLine($"<hr/>");
+                emailContent.AppendLine($"<h2>Body:</h2>");
+                emailContent.AppendLine(body);
+                
+                if (attachmentData != null && attachmentData.Length > 0)
+                {
+                    emailContent.AppendLine($"<hr/>");
+                    emailContent.AppendLine($"<h2>Attachment:</h2>");
+                    emailContent.AppendLine($"<p><strong>Name:</strong> {attachmentName}</p>");
+                    emailContent.AppendLine($"<p><strong>Size:</strong> {attachmentData.Length} bytes</p>");
+                    emailContent.AppendLine($"<p>Note: Attachment data is not included in this log for security reasons.</p>");
+                }
+                
+                emailContent.AppendLine($"</body></html>");
+
+                await File.WriteAllTextAsync(logFilePath, emailContent.ToString());
+                _logger.LogInformation("Email content logged to file: {LogFilePath}", logFilePath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to log email content to file");
             }
         }
 
@@ -115,6 +210,7 @@ namespace HospitalManagement.Application.Services
 
             var fileName = $"Prescription_{patientName.Replace(" ", "_")}_{appointmentDate:yyyyMMdd}.pdf";
 
+            // In development mode, this will just log the email
             await SendEmailWithAttachmentAsync(toEmail, toName, subject, body, pdfData, fileName);
         }
     }

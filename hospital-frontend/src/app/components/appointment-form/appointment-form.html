@@ -76,6 +76,7 @@
 
             <mat-form-field appearance="outline" class="half-width">
               <mat-label>Time *</mat-label>
+
               <input
                 matInput
                 type="time"
@@ -86,6 +87,7 @@
                 Appointment time is required
               </mat-error>
             </mat-form-field>
+
           </div>
 
           <!-- Status Selection -->
@@ -104,23 +106,18 @@
             </mat-form-field>
           </div>
 
-          <!-- Reason -->
+          <!-- Visit Type Selection -->
           <div class="form-row">
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Reason for Visit *</mat-label>
-              <input
-                matInput
-                formControlName="reason"
-                placeholder="e.g., Annual checkup, Follow-up, Consultation"
-                maxlength="200"
-                required>
-              <mat-icon matSuffix>description</mat-icon>
-              <mat-hint>{{ reason?.value?.length || 0 }}/200</mat-hint>
-              <mat-error *ngIf="reason?.hasError('required') && reason?.touched">
-                Reason for visit is required
-              </mat-error>
-              <mat-error *ngIf="reason?.hasError('maxlength')">
-                Reason cannot exceed 200 characters
+              <mat-label>Visit Type *</mat-label>
+              <mat-select formControlName="visit" required>
+                <mat-option *ngFor="let visitType of visitypes" [value]="visitType.value">
+                  {{ visitType.label }}
+                </mat-option>
+              </mat-select>
+              <mat-icon matSuffix>medical_services</mat-icon>
+              <mat-error *ngIf="visit?.hasError('required') && visit?.touched">
+                Visit type selection is required
               </mat-error>
             </mat-form-field>
           </div>

@@ -12,7 +12,7 @@ export interface Appointment {
   diagnosis?: string;
   status: string;
   prescriptionDetails: PrescriptionDetail[];
-  createdAt: Date;
+  createdAt?: Date;
   updatedAt?: Date;
 }
 

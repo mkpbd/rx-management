@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
+import { Observable, catchError, tap } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -19,11 +19,45 @@ export class ApiService {
         }
       });
     }
-    return this.http.get<T>(`${this.baseUrl}${url}`, { params: httpParams });
+    const fullUrl = `${this.baseUrl}${url}`;
+    console.log('Making GET request to:', fullUrl, 'with params:', params);
+
+    return this.http.get<T>(fullUrl, { params: httpParams }).pipe(
+      tap((response: T) => {
+        console.log('API response received:', response);
+      }),
+      catchError((error: any) => {
+        console.error('API request failed for URL:', fullUrl);
+        console.error('Error details:', error);
+        console.error('Error status:', error.status);
+        console.error('Error message:', error.message);
+        if (error.error) {
+          console.error('Error body:', error.error);
+        }
+        throw error;
+      })
+    );
   }
 
   post<T>(url: string, data: any): Observable<T> {
-    return this.http.post<T>(`${this.baseUrl}${url}`, data);
+    const fullUrl = `${this.baseUrl}${url}`;
+    console.log('Making POST request to:', fullUrl, 'with data:', data);
+
+    return this.http.post<T>(fullUrl, data).pipe(
+      tap((response: T) => {
+        console.log('API response received:', response);
+      }),
+      catchError((error: any) => {
+        console.error('API request failed for URL:', fullUrl);
+        console.error('Error details:', error);
+        console.error('Error status:', error.status);
+        console.error('Error message:', error.message);
+        if (error.error) {
+          console.error('Error body:', error.error);
+        }
+        throw error;
+      })
+    );
   }
 
   put<T>(url: string, data: any): Observable<T> {

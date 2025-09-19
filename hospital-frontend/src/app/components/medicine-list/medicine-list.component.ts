@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,6 +15,8 @@ import { MatChipsModule } from '@angular/material/chips';
 import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { MedicineService } from '../../services/medicine.service';
 import { Medicine } from '../../models/medicine.model';
+import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-medicine-list',
@@ -320,12 +322,13 @@ import { Medicine } from '../../models/medicine.model';
     }
   `]
 })
-export class MedicineListComponent implements OnInit {
+export class MedicineListComponent implements OnInit, OnDestroy {
   displayedColumns: string[] = ['id', 'name', 'manufacturer', 'category', 'dosage', 'price', 'status', 'actions'];
   medicines: Medicine[] = [];
   dataSource = new MatTableDataSource<Medicine>([]);
   isLoading = false;
   searchForm: FormGroup;
+  private routerSubscription = new Subscription();
 
   categories = [
     'Analgesics', 'Antibiotics', 'Antifungals', 'Antivirals', 'Cardiovascular',
@@ -347,6 +350,22 @@ export class MedicineListComponent implements OnInit {
 
   ngOnInit() {
     this.loadMedicines();
+
+    // Subscribe to router events to reload data when navigating back to medicine list
+    this.routerSubscription.add(
+      this.router.events
+        .pipe(filter(event => event instanceof NavigationEnd))
+        .subscribe((event: NavigationEnd) => {
+          if (event.url === '/medicines' || event.urlAfterRedirects === '/medicines') {
+            this.loadMedicines();
+          }
+        })
+    );
+  }
+
+  ngOnDestroy() {
+    // Unsubscribe from all subscriptions to prevent memory leaks
+    this.routerSubscription.unsubscribe();
   }
 
   loadMedicines() {
@@ -402,8 +421,6 @@ export class MedicineListComponent implements OnInit {
     this.searchForm.reset();
     this.dataSource.data = this.medicines;
   }
-
-
 
   addMedicine() {
     this.router.navigate(['/medicines/create']);

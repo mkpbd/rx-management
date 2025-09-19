@@ -26,6 +26,7 @@ import { CreatePrescriptionDetail, UpdatePrescriptionDetail } from '../../models
 import { Patient } from '../../models/patient.model';
 import { Doctor } from '../../models/doctor.model';
 
+
 @Component({
   selector: 'app-appointment-form',
   standalone: true,
@@ -65,6 +66,13 @@ export class AppointmentFormComponent implements OnInit {
     { value: 'In Progress', label: 'In Progress' }
   ];
 
+  visitypes = [
+    { value: 'Annual', label: 'Annual' },
+    { value: 'Follow up', label: 'Follow up' },
+    { value: 'Checkup', label: 'Checkup' },
+    { value: 'Consultation', label: 'Consultation' }
+  ];
+
   constructor(
     private fb: FormBuilder,
     private router: Router,
@@ -81,8 +89,9 @@ export class AppointmentFormComponent implements OnInit {
       appointmentDate: ['', [Validators.required]],
       appointmentTime: ['', [Validators.required]],
       status: ['Scheduled', [Validators.required]],
+      visit: ['Follow up', [Validators.required]],
       notes: ['', [Validators.maxLength(500)]],
-      reason: ['', [Validators.required, Validators.maxLength(200)]]
+      // reason: ['', [Validators.required, Validators.maxLength(200)]]
     });
   }
 
@@ -131,9 +140,17 @@ export class AppointmentFormComponent implements OnInit {
       this.appointmentService.getAppointment(this.appointmentId).subscribe({
         next: (appointment) => {
           // Convert date string to Date object for form
+          const appointmentDate = new Date(appointment.appointmentDate);
+
+          // Extract time portion for the time input (format: HH:MM)
+          const hours = appointmentDate.getHours().toString().padStart(2, '0');
+          const minutes = appointmentDate.getMinutes().toString().padStart(2, '0');
+          const appointmentTime = `${hours}:${minutes}`;
+
           const appointmentData = {
             ...appointment,
-            appointmentDate: new Date(appointment.appointmentDate)
+            appointmentDate: appointmentDate,
+            appointmentTime: appointmentTime
           };
 
           this.appointmentForm.patchValue(appointmentData);
@@ -166,15 +183,19 @@ export class AppointmentFormComponent implements OnInit {
 
       const formValue = this.appointmentForm.value;
 
+      // Combine date and time
+      const combinedDateTime = this.combineDateAndTime(formValue.appointmentDate, formValue.appointmentTime);
+
       if (this.isEditMode && this.appointmentId) {
         // Update existing appointment
         const updateData: UpdateAppointment = {
           patientId: formValue.patientId,
           doctorId: formValue.doctorId,
-          appointmentDate: formValue.appointmentDate,
-          visitType: formValue.reason,
+          appointmentDate: combinedDateTime,
+          visitType: formValue.visit,
           notes: formValue.notes,
           status: formValue.status,
+
           prescriptionDetails: this.prescriptionDetails.map(pd => ({
             medicineId: pd.medicineId,
             dosage: pd.dosage,
@@ -206,8 +227,8 @@ export class AppointmentFormComponent implements OnInit {
         const createData: CreateAppointment = {
           patientId: formValue.patientId,
           doctorId: formValue.doctorId,
-          appointmentDate: formValue.appointmentDate,
-          visitType: formValue.reason,
+          appointmentDate: combinedDateTime,
+          visitType: formValue.visit,
           notes: formValue.notes,
           status: formValue.status,
           prescriptionDetails: this.prescriptionDetails.map(pd => ({
@@ -275,8 +296,8 @@ export class AppointmentFormComponent implements OnInit {
   get appointmentDate() { return this.appointmentForm.get('appointmentDate'); }
   get appointmentTime() { return this.appointmentForm.get('appointmentTime'); }
   get status() { return this.appointmentForm.get('status'); }
+  get visit() { return this.appointmentForm.get('visit'); }
   get notes() { return this.appointmentForm.get('notes'); }
-  get reason() { return this.appointmentForm.get('reason'); }
 
   // Helper methods for template
   getPatientDisplayName(patient: Patient): string {
@@ -292,12 +313,14 @@ export class AppointmentFormComponent implements OnInit {
     const selectedPatient = this.patients.find(p => p.id === formValue.patientId);
     const selectedDoctor = this.doctors.find(d => d.id === formValue.doctorId);
 
+    // Combine date and time for PDF display
+    const combinedDateTime = this.combineDateAndTime(formValue.appointmentDate, formValue.appointmentTime);
+
     return {
       patientName: selectedPatient ? this.getPatientDisplayName(selectedPatient) : 'Unknown Patient',
       doctorName: selectedDoctor ? this.getDoctorDisplayName(selectedDoctor) : 'Unknown Doctor',
-      appointmentDate: formValue.appointmentDate,
+      appointmentDate: combinedDateTime,
       appointmentTime: formValue.appointmentTime,
-      reason: formValue.reason,
       notes: formValue.notes
     };
   }
@@ -315,5 +338,21 @@ export class AppointmentFormComponent implements OnInit {
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + days);
     return endDate;
+  }
+
+  // Helper method to combine date and time
+  private combineDateAndTime(date: Date, time: string): Date {
+    if (!date || !time) {
+      return date || new Date();
+    }
+
+    const [hours, minutes] = time.split(':').map(Number);
+    const combinedDate = new Date(date);
+    combinedDate.setHours(hours || 0);
+    combinedDate.setMinutes(minutes || 0);
+    combinedDate.setSeconds(0);
+    combinedDate.setMilliseconds(0);
+
+    return combinedDate;
   }
 }

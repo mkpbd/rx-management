@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -14,6 +14,8 @@ import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { DoctorService } from '../../services/doctor.service';
 import { Doctor } from '../../models/doctor.model';
+import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-doctor-list',
@@ -280,12 +282,13 @@ import { Doctor } from '../../models/doctor.model';
     }
   `]
 })
-export class DoctorListComponent implements OnInit {
+export class DoctorListComponent implements OnInit, OnDestroy {
   displayedColumns: string[] = ['id', 'name', 'email', 'phone', 'specialization', 'licenseNumber', 'experience', 'actions'];
   doctors: Doctor[] = [];
   dataSource = new MatTableDataSource<Doctor>([]);
   isLoading = false;
   searchForm: FormGroup;
+  private routerSubscription = new Subscription();
 
   specializations = [
     'Cardiology', 'Dermatology', 'Neurology', 'Orthopedics', 'Pediatrics',
@@ -306,6 +309,22 @@ export class DoctorListComponent implements OnInit {
 
   ngOnInit() {
     this.loadDoctors();
+    
+    // Subscribe to router events to reload data when navigating back to doctor list
+    this.routerSubscription.add(
+      this.router.events
+        .pipe(filter(event => event instanceof NavigationEnd))
+        .subscribe((event: NavigationEnd) => {
+          if (event.url === '/doctors' || event.urlAfterRedirects === '/doctors') {
+            this.loadDoctors();
+          }
+        })
+    );
+  }
+
+  ngOnDestroy() {
+    // Unsubscribe from all subscriptions to prevent memory leaks
+    this.routerSubscription.unsubscribe();
   }
 
   loadDoctors() {

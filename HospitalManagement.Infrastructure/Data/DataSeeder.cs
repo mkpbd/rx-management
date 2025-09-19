@@ -22,6 +22,11 @@ namespace HospitalManagement.Infrastructure.Data
                 await SeedMedicinesAsync(context);
             }
 
+            if (!await context.Appointments.AnyAsync())
+            {
+                await SeedAppointmentsAsync(context);
+            }
+
             await context.SaveChangesAsync();
         }
 
@@ -251,6 +256,96 @@ namespace HospitalManagement.Infrastructure.Data
             };
 
             await context.Medicines.AddRangeAsync(medicines);
+        }
+
+        private static async Task SeedAppointmentsAsync(HospitalDbContext context)
+        {
+            // Get existing patients, doctors, and medicines
+            var patients = await context.Patients.ToListAsync();
+            var doctors = await context.Doctors.ToListAsync();
+            var medicines = await context.Medicines.ToListAsync();
+
+            if (patients.Any() && doctors.Any() && medicines.Any())
+            {
+                var appointments = new List<Appointment>
+                {
+                    new Appointment
+                    {
+                        PatientId = patients[0].Id,
+                        DoctorId = doctors[0].Id,
+                        AppointmentDate = DateTime.Now.AddDays(1),
+                        VisitType = "Consultation",
+                        Notes = "Regular checkup",
+                        Diagnosis = "Normal health",
+                        Status = "Scheduled",
+                        CreatedAt = DateTime.Now
+                    },
+                    new Appointment
+                    {
+                        PatientId = patients[1].Id,
+                        DoctorId = doctors[1].Id,
+                        AppointmentDate = DateTime.Now.AddDays(2),
+                        VisitType = "Follow-up",
+                        Notes = "Follow-up on previous treatment",
+                        Diagnosis = "Improving condition",
+                        Status = "Scheduled",
+                        CreatedAt = DateTime.Now
+                    },
+                    new Appointment
+                    {
+                        PatientId = patients[2].Id,
+                        DoctorId = doctors[2].Id,
+                        AppointmentDate = DateTime.Now.AddDays(-1),
+                        VisitType = "Emergency",
+                        Notes = "Urgent care needed",
+                        Diagnosis = "Minor injury",
+                        Status = "Completed",
+                        CreatedAt = DateTime.Now.AddDays(-1)
+                    }
+                };
+
+                await context.Appointments.AddRangeAsync(appointments);
+
+                // Add some prescription details for the appointments
+                var prescriptionDetails = new List<PrescriptionDetail>
+                {
+                    new PrescriptionDetail
+                    {
+                        AppointmentId = appointments[0].Id,
+                        MedicineId = medicines[0].Id,
+                        Dosage = "1 tablet twice daily",
+                        StartDate = DateTime.Now,
+                        EndDate = DateTime.Now.AddDays(7),
+                        Frequency = "Twice daily",
+                        Instructions = "Take with food",
+                        CreatedAt = DateTime.Now
+                    },
+                    new PrescriptionDetail
+                    {
+                        AppointmentId = appointments[0].Id,
+                        MedicineId = medicines[1].Id,
+                        Dosage = "1 tablet daily",
+                        StartDate = DateTime.Now,
+                        EndDate = DateTime.Now.AddDays(14),
+                        Frequency = "Once daily",
+                        Instructions = "Take in the morning",
+                        CreatedAt = DateTime.Now
+                    },
+                    new PrescriptionDetail
+                    {
+                        AppointmentId = appointments[2].Id,
+                        MedicineId = medicines[2].Id,
+                        Dosage = "1 capsule three times daily",
+                        StartDate = DateTime.Now.AddDays(-1),
+                        EndDate = DateTime.Now.AddDays(5),
+                        Frequency = "Three times daily",
+                        Instructions = "Take before meals",
+                        CreatedAt = DateTime.Now.AddDays(-1)
+                    }
+                };
+
+                await context.PrescriptionDetails.AddRangeAsync(prescriptionDetails);
+            }
         }
     }
 }

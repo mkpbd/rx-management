@@ -1,13 +1,7 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, catchError } from 'rxjs';
 import { ApiService } from './api.service';
-import {
-  Appointment,
-  CreateAppointment,
-  UpdateAppointment,
-  PagedResult,
-  AppointmentFilter
-} from '../models/appointment.model';
+import { Appointment, CreateAppointment, UpdateAppointment, PagedResult, AppointmentFilter } from '../models/appointment.model';
 
 @Injectable({
   providedIn: 'root'
@@ -42,7 +36,12 @@ export class AppointmentService {
   }
 
   sendPrescriptionEmail(id: number, emailRequest: { toEmail: string; toName?: string }): Observable<any> {
-    return this.apiService.post(`${this.endpoint}/${id}/email`, emailRequest);
+    return this.apiService.post(`${this.endpoint}/${id}/email`, emailRequest).pipe(
+      catchError((error: any) => {
+        console.error('Error sending prescription email:', error);
+        throw error;
+      })
+    );
   }
 
   downloadPdf(appointment: Appointment): void {

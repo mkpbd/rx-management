@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -11,6 +11,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { AppointmentService } from '../../services/appointment.service';
+import { PatientService } from '../../services/patient.service';
 import { Appointment } from '../../models/appointment.model';
 import { EmailDialogComponent } from '../email-dialog/email-dialog.component';
 
@@ -30,187 +31,197 @@ import { EmailDialogComponent } from '../email-dialog/email-dialog.component';
     MatDialogModule
   ],
   template: `
-    <div class=\"appointment-detail-container\">
-      <div class=\"detail-header\">
+    <div class="appointment-detail-container">
+      <div class="detail-header">
         <button
           mat-icon-button
-          (click)=\"navigateBack()\"
-          class=\"back-button\">
+          (click)="navigateBack()"
+          class="back-button">
           <mat-icon>arrow_back</mat-icon>
         </button>
         <h1>Appointment Details</h1>
       </div>
 
-      <div *ngIf=\"isLoading\" class=\"loading-container\">
-        <mat-spinner diameter=\"50\"></mat-spinner>
+      <div *ngIf="isLoading" class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
         <p>Loading appointment details...</p>
       </div>
 
-      <div *ngIf=\"!isLoading && appointment\" class=\"appointment-content\">
-        <div class=\"details-grid\">
+      <div *ngIf="!isLoading && appointment" class="appointment-content">
+        <div class="details-grid">
           <!-- Patient Information -->
-          <mat-card class=\"info-card\">
+          <mat-card class="info-card">
             <mat-card-header>
-              <div mat-card-avatar class=\"patient-avatar\">
+              <div mat-card-avatar class="patient-avatar">
                 <mat-icon>person</mat-icon>
               </div>
               <mat-card-title>Patient Information</mat-card-title>
             </mat-card-header>
             <mat-card-content>
-              <div class=\"info-item\">
-                <span class=\"label\">Name:</span>
-                <span class=\"value\">{{ appointment.patientName }}</span>
+              <div class="info-item">
+                <span class="label">Name:</span>
+                <span class="value">{{ appointment.patientName }}</span>
               </div>
-              <div class=\"info-item\">
-                <span class=\"label\">Patient ID:</span>
-                <span class=\"value\">#{{ appointment.patientId }}</span>
+              <div class="info-item">
+                <span class="label">Patient ID:</span>
+                <span class="value">#{{ appointment.patientId }}</span>
               </div>
             </mat-card-content>
           </mat-card>
 
           <!-- Doctor Information -->
-          <mat-card class=\"info-card\">
+          <mat-card class="info-card">
             <mat-card-header>
-              <div mat-card-avatar class=\"doctor-avatar\">
+              <div mat-card-avatar class="doctor-avatar">
                 <mat-icon>medical_services</mat-icon>
               </div>
               <mat-card-title>Doctor Information</mat-card-title>
             </mat-card-header>
             <mat-card-content>
-              <div class=\"info-item\">
-                <span class=\"label\">Name:</span>
-                <span class=\"value\">{{ appointment.doctorName }}</span>
+              <div class="info-item">
+                <span class="label">Name:</span>
+                <span class="value">{{ appointment.doctorName }}</span>
               </div>
-              <div class=\"info-item\">
-                <span class=\"label\">Doctor ID:</span>
-                <span class=\"value\">#{{ appointment.doctorId }}</span>
+              <div class="info-item">
+                <span class="label">Doctor ID:</span>
+                <span class="value">#{{ appointment.doctorId }}</span>
               </div>
             </mat-card-content>
           </mat-card>
 
           <!-- Appointment Information -->
-          <mat-card class=\"info-card full-width\">
+          <mat-card class="info-card full-width">
             <mat-card-header>
-              <div mat-card-avatar class=\"appointment-avatar\">
+              <div mat-card-avatar class="appointment-avatar">
                 <mat-icon>calendar_today</mat-icon>
               </div>
               <mat-card-title>Appointment Information</mat-card-title>
             </mat-card-header>
             <mat-card-content>
-              <div class=\"appointment-details\">
-                <div class=\"info-item\">
-                  <span class=\"label\">Appointment ID:</span>
-                  <span class=\"value\">#{{ appointment.id }}</span>
+              <div class="appointment-details">
+                <div class="info-item">
+                  <span class="label">Appointment ID:</span>
+                  <span class="value">#{{ appointment.id }}</span>
                 </div>
-                <div class=\"info-item\">
-                  <span class=\"label\">Date & Time:</span>
-                  <span class=\"value\">{{ formatDateTime(appointment.appointmentDate) }}</span>
+                <div class="info-item">
+                  <span class="label">Date & Time:</span>
+                  <span class="value">{{ formatDateTime(appointment.appointmentDate) }}</span>
                 </div>
-                <div class=\"info-item\">
-                  <span class=\"label\">Visit Type:</span>
-                  <span class=\"value\">{{ appointment.visitType }}</span>
+                <div class="info-item">
+                  <span class="label">Visit Type:</span>
+                  <span class="value">{{ appointment.visitType }}</span>
                 </div>
-                <div class=\"info-item\">
-                  <span class=\"label\">Status:</span>
-                  <mat-chip [class]=\"getStatusClass(appointment.status)\">{{ appointment.status }}</mat-chip>
+                <div class="info-item">
+                  <span class="label">Status:</span>
+                  <mat-chip [class]="getStatusClass(appointment.status)">{{ appointment.status }}</mat-chip>
                 </div>
-                <div class=\"info-item\" *ngIf=\"appointment.notes\">
-                  <span class=\"label\">Notes:</span>
-                  <span class=\"value\">{{ appointment.notes }}</span>
+                <div class="info-item" *ngIf="appointment.notes">
+                  <span class="label">Notes:</span>
+                  <span class="value">{{ appointment.notes }}</span>
                 </div>
-                <div class=\"info-item\" *ngIf=\"appointment.diagnosis\">
-                  <span class=\"label\">Diagnosis:</span>
-                  <span class=\"value\">{{ appointment.diagnosis }}</span>
+                <div class="info-item" *ngIf="appointment.diagnosis">
+                  <span class="label">Diagnosis:</span>
+                  <span class="value">{{ appointment.diagnosis }}</span>
                 </div>
               </div>
             </mat-card-content>
           </mat-card>
 
           <!-- Prescription Details -->
-          <mat-card class=\"info-card full-width\" *ngIf=\"appointment.prescriptionDetails && appointment.prescriptionDetails.length > 0\">
+          <mat-card class="info-card full-width" *ngIf="appointment.prescriptionDetails && appointment.prescriptionDetails.length > 0">
             <mat-card-header>
-              <div mat-card-avatar class=\"prescription-avatar\">
+              <div mat-card-avatar class="prescription-avatar">
                 <mat-icon>medication</mat-icon>
               </div>
               <mat-card-title>Prescription Details</mat-card-title>
             </mat-card-header>
             <mat-card-content>
-              <table mat-table [dataSource]=\"appointment.prescriptionDetails\" class=\"prescription-table\">
-                <ng-container matColumnDef=\"medicine\">
+              <table mat-table [dataSource]="appointment.prescriptionDetails" class="prescription-table">
+                <ng-container matColumnDef="medicine">
                   <th mat-header-cell *matHeaderCellDef>Medicine</th>
-                  <td mat-cell *matCellDef=\"let prescription\">{{ prescription.medicineName }}</td>
+                  <td mat-cell *matCellDef="let prescription">{{ prescription.medicineName }}</td>
                 </ng-container>
 
-                <ng-container matColumnDef=\"dosage\">
+                <ng-container matColumnDef="dosage">
                   <th mat-header-cell *matHeaderCellDef>Dosage</th>
-                  <td mat-cell *matCellDef=\"let prescription\">{{ prescription.dosage }}</td>
+                  <td mat-cell *matCellDef="let prescription">{{ prescription.dosage }}</td>
                 </ng-container>
 
-                <ng-container matColumnDef=\"frequency\">
+                <ng-container matColumnDef="frequency">
                   <th mat-header-cell *matHeaderCellDef>Frequency</th>
-                  <td mat-cell *matCellDef=\"let prescription\">{{ prescription.frequency || 'As needed' }}</td>
+                  <td mat-cell *matCellDef="let prescription">{{ prescription.frequency || 'As needed' }}</td>
                 </ng-container>
 
-                <ng-container matColumnDef=\"duration\">
+                <ng-container matColumnDef="duration">
                   <th mat-header-cell *matHeaderCellDef>Duration</th>
-                  <td mat-cell *matCellDef=\"let prescription\">{{ calculateDuration(prescription.startDate, prescription.endDate) }}</td>
+                  <td mat-cell *matCellDef="let prescription">{{ calculateDuration(prescription.startDate, prescription.endDate) }}</td>
                 </ng-container>
 
-                <ng-container matColumnDef=\"instructions\">
+                <ng-container matColumnDef="instructions">
                   <th mat-header-cell *matHeaderCellDef>Instructions</th>
-                  <td mat-cell *matCellDef=\"let prescription\">{{ prescription.instructions || 'No special instructions' }}</td>
+                  <td mat-cell *matCellDef="let prescription">{{ prescription.instructions || 'No special instructions' }}</td>
                 </ng-container>
 
-                <tr mat-header-row *matHeaderRowDef=\"prescriptionColumns\"></tr>
-                <tr mat-row *matRowDef=\"let row; columns: prescriptionColumns;\"></tr>
+                <tr mat-header-row *matHeaderRowDef="prescriptionColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: prescriptionColumns;"></tr>
               </table>
             </mat-card-content>
           </mat-card>
         </div>
 
         <!-- Action Buttons -->
-        <div class=\"action-buttons\">
+        <div class="action-buttons">
           <button
             mat-raised-button
-            color=\"primary\"
-            (click)=\"editAppointment()\">
+            color="primary"
+            (click)="editAppointment()">
             <mat-icon>edit</mat-icon>
             Edit Appointment
           </button>
 
           <button
             mat-raised-button
-            color=\"accent\"
-            (click)=\"downloadPDF()\">
+            color="accent"
+            (click)="downloadPDF()">
             <mat-icon>picture_as_pdf</mat-icon>
             Download PDF
           </button>
 
           <button
             mat-raised-button
-            (click)=\"sendEmail()\">
+            (click)="sendEmail()">
             <mat-icon>email</mat-icon>
             Send Email
           </button>
 
           <button
             mat-button
-            color=\"warn\"
-            (click)=\"deleteAppointment()\">
+            color="warn"
+            (click)="deleteAppointment()">
             <mat-icon>delete</mat-icon>
             Delete
           </button>
         </div>
       </div>
 
-      <div *ngIf=\"!isLoading && !appointment\" class=\"error-container\">
-        <mat-icon class=\"error-icon\">error_outline</mat-icon>
+      <div *ngIf="!isLoading && !appointment" class="error-container">
+        <mat-icon class="error-icon">error_outline</mat-icon>
         <h2>Appointment Not Found</h2>
         <p>The requested appointment could not be found.</p>
-        <button mat-raised-button color=\"primary\" (click)=\"navigateBack()\">
-          <mat-icon>arrow_back</mat-icon>
-          Back to Appointments
-        </button>
+        <div class="error-actions">
+          <button mat-raised-button color="primary" (click)="navigateBack()">
+            <mat-icon>arrow_back</mat-icon>
+            Back to Appointments
+          </button>
+          <button mat-raised-button color="accent" (click)="retryLoad()">
+            <mat-icon>refresh</mat-icon>
+            Retry
+          </button>
+          <button mat-raised-button color="warn" (click)="testApiCall()">
+            <mat-icon>bug_report</mat-icon>
+            Test API
+          </button>
+        </div>
       </div>
     </div>
   `,
@@ -252,6 +263,12 @@ import { EmailDialogComponent } from '../email-dialog/email-dialog.component';
     .loading-container p {
       margin-top: 16px;
       color: #666;
+    }
+
+    .error-actions {
+      display: flex;
+      gap: 16px;
+      margin-top: 24px;
     }
 
     .error-icon {
@@ -412,37 +429,153 @@ export class AppointmentDetailComponent implements OnInit {
   appointment: Appointment | null = null;
   isLoading = true;
   prescriptionColumns = ['medicine', 'dosage', 'frequency', 'duration', 'instructions'];
+  patientEmail: string = '';
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private appointmentService: AppointmentService,
+    private patientService: PatientService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
-    const appointmentId = Number(this.route.snapshot.paramMap.get('id'));
-    if (appointmentId) {
+    console.log('AppointmentDetailComponent initialized');
+    console.log('Route snapshot:', this.route.snapshot);
+    console.log('Route params:', this.route.snapshot.paramMap);
+
+    const idParam = this.route.snapshot.paramMap.get('id');
+    console.log('Appointment ID parameter:', idParam);
+
+    const appointmentId = idParam ? Number(idParam) : NaN;
+    console.log('Parsed appointment ID:', appointmentId);
+    console.log('Is valid number:', !isNaN(appointmentId));
+
+    if (appointmentId && !isNaN(appointmentId)) {
+      console.log('Calling loadAppointment with ID:', appointmentId);
       this.loadAppointment(appointmentId);
     } else {
+      console.error('Invalid appointment ID:', idParam);
+      this.snackBar.open('Invalid appointment ID', 'Close', { duration: 3000 });
       this.isLoading = false;
     }
   }
 
   private loadAppointment(id: number) {
+    console.log('Loading appointment with ID:', id);
+    this.isLoading = true; // Make sure loading is set to true
+
+    // Add a timeout to prevent indefinite loading
+    const timeout = setTimeout(() => {
+      if (this.isLoading) {
+        console.warn('Appointment loading timeout');
+        this.isLoading = false;
+        this.snackBar.open('Request timeout. Please try again.', 'Close', { duration: 5000 });
+        this.cdr.detectChanges(); // Trigger change detection
+      }
+    }, 10000); // 10 second timeout
+
     this.appointmentService.getAppointment(id).subscribe({
       next: (appointment) => {
-        this.appointment = appointment;
-        this.isLoading = false;
+        clearTimeout(timeout); // Clear the timeout
+        console.log('Received appointment data:', appointment);
+
+        // Handle case where appointment might be null or undefined
+        if (!appointment) {
+          console.error('Received null or undefined appointment data');
+          this.snackBar.open('No appointment data received', 'Close', { duration: 5000 });
+          this.appointment = null;
+          this.isLoading = false;
+          this.cdr.detectChanges(); // Trigger change detection
+          return;
+        }
+
+        try {
+          // Create a new object to ensure we're not modifying the original
+          const processedAppointment: Appointment = {
+            ...appointment,
+            appointmentDate: this.parseDate(appointment.appointmentDate),
+            createdAt: appointment.createdAt ? this.parseDate(appointment.createdAt) : undefined,
+            updatedAt: appointment.updatedAt ? this.parseDate(appointment.updatedAt) : undefined
+          };
+
+          // Ensure prescription detail dates are properly parsed
+          if (processedAppointment.prescriptionDetails && Array.isArray(processedAppointment.prescriptionDetails)) {
+            processedAppointment.prescriptionDetails = processedAppointment.prescriptionDetails.map(prescription => ({
+              ...prescription,
+              startDate: this.parseDate(prescription.startDate),
+              endDate: this.parseDate(prescription.endDate),
+              createdAt: prescription.createdAt ? this.parseDate(prescription.createdAt) : new Date(),
+              updatedAt: prescription.updatedAt ? this.parseDate(prescription.updatedAt) : undefined
+            }));
+          }
+
+          this.appointment = processedAppointment;
+
+          // Load patient email
+          this.loadPatientEmail(processedAppointment.patientId);
+
+          this.isLoading = false;
+          console.log('Appointment loaded successfully:', this.appointment);
+          this.cdr.detectChanges(); // Trigger change detection
+        } catch (error) {
+          console.error('Error processing appointment data:', error);
+          this.snackBar.open('Error processing appointment data', 'Close', { duration: 5000 });
+          this.appointment = null;
+          this.isLoading = false;
+          this.cdr.detectChanges(); // Trigger change detection
+        }
       },
       error: (error) => {
+        clearTimeout(timeout); // Clear the timeout
         console.error('Error loading appointment:', error);
-        this.snackBar.open('Error loading appointment details', 'Close', { duration: 3000 });
+        // Check if it's a 404 error (not found)
+        if (error.status === 404) {
+          this.snackBar.open('Appointment not found', 'Close', { duration: 5000 });
+        } else if (error.status === 0) {
+          this.snackBar.open('Unable to connect to server. Please check if the backend is running.', 'Close', { duration: 5000 });
+        } else {
+          this.snackBar.open('Error loading appointment details: ' + (error.message || 'Unknown error'), 'Close', { duration: 5000 });
+        }
         this.appointment = null;
         this.isLoading = false;
+        this.cdr.detectChanges(); // Trigger change detection
       }
     });
+  }
+
+  private loadPatientEmail(patientId: number) {
+    this.patientService.getPatient(patientId).subscribe({
+      next: (patient) => {
+        this.patientEmail = patient.email;
+        console.log('Patient email loaded:', this.patientEmail);
+        this.cdr.detectChanges(); // Trigger change detection
+      },
+      error: (error) => {
+        console.error('Error loading patient email:', error);
+        this.patientEmail = '';
+        this.cdr.detectChanges(); // Trigger change detection
+      }
+    });
+  }
+
+  private parseDate(dateValue: string | Date): Date {
+    if (dateValue instanceof Date) {
+      return dateValue;
+    }
+
+    if (typeof dateValue === 'string') {
+      // Handle different date string formats
+      const parsedDate = new Date(dateValue);
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate;
+      }
+    }
+
+    // Fallback to current date if parsing fails
+    return new Date();
   }
 
   navigateBack() {
@@ -470,7 +603,8 @@ export class AppointmentDetailComponent implements OnInit {
         appointmentId: this.appointment.id,
         patientName: this.appointment.patientName,
         doctorName: this.appointment.doctorName,
-        appointmentDate: this.appointment.appointmentDate
+        appointmentDate: this.appointment.appointmentDate,
+        patientEmail: this.patientEmail // Pass patient email to dialog
       }
     });
 
@@ -500,7 +634,18 @@ export class AppointmentDetailComponent implements OnInit {
       error: (error) => {
         snackBarRef.dismiss();
         console.error('Email sending failed:', error);
-        this.snackBar.open('Failed to send prescription email. Please try again later.', 'Close', {
+
+        // Provide more detailed error message
+        let errorMessage = 'Failed to send prescription email. Please try again later.';
+        if (error.status === 500) {
+          errorMessage = 'Server error occurred while sending email. Please check server logs for details.';
+        } else if (error.status === 400) {
+          errorMessage = 'Invalid email request. Please check the email address and try again.';
+        } else if (error.status === 404) {
+          errorMessage = 'Appointment not found.';
+        }
+
+        this.snackBar.open(errorMessage, 'Close', {
           duration: 5000,
           horizontalPosition: 'end',
           verticalPosition: 'top'
@@ -526,24 +671,76 @@ export class AppointmentDetailComponent implements OnInit {
     }
   }
 
+  retryLoad() {
+    const idParam = this.route.snapshot.paramMap.get('id');
+    const appointmentId = idParam ? Number(idParam) : NaN;
+
+    if (appointmentId && !isNaN(appointmentId)) {
+      this.loadAppointment(appointmentId);
+    }
+  }
+
+  testApiCall() {
+    const idParam = this.route.snapshot.paramMap.get('id');
+    const appointmentId = idParam ? Number(idParam) : 1; // Default to 1 for testing
+
+    console.log('Testing API call with ID:', appointmentId);
+
+    // Direct fetch test
+    fetch(`http://localhost:5037/api/appointments/${appointmentId}`)
+      .then(response => {
+        console.log('Fetch response status:', response.status);
+        return response.json();
+      })
+      .then(data => {
+        console.log('Fetch response data:', data);
+      })
+      .catch(error => {
+        console.error('Fetch error:', error);
+      });
+  }
+
   formatDateTime(dateString: string | Date): string {
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-    return date.toLocaleString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+
+      // Check if date is valid
+      if (!(date instanceof Date) || isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
+
+      return date.toLocaleString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid Date';
+    }
   }
 
   calculateDuration(startDate: Date, endDate: Date): string {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return `${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+    try {
+      const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
+      const end = typeof endDate === 'string' ? new Date(endDate) : endDate;
+
+      // Check if dates are valid
+      if (!(start instanceof Date) || isNaN(start.getTime()) ||
+          !(end instanceof Date) || isNaN(end.getTime())) {
+        return 'Invalid Duration';
+      }
+
+      const diffTime = Math.abs(end.getTime() - start.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return `${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+    } catch (error) {
+      console.error('Error calculating duration:', error);
+      return 'Invalid Duration';
+    }
   }
 
   getStatusClass(status: string): string {
