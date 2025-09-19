@@ -299,11 +299,44 @@ namespace HospitalManagement.Api.Controllers
                 
                 return Ok(new { message = "Prescription report sent successfully", sentTo = emailRequest.ToEmail });
             }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("configured"))
+            {
+                _logger.LogError(ex, "Email service configuration error for appointment {AppointmentId}", id);
+                return StatusCode(500, "Email service is not properly configured. Please contact system administrator.");
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while sending prescription email for appointment {AppointmentId}", id);
                 return StatusCode(500, "Failed to send prescription report. Please try again later.");
             }
         }
+
+        // Test endpoint for email service
+        [HttpPost("test-email")]
+        public async Task<ActionResult> TestEmailService([FromBody] EmailRequestDto emailRequest)
+        {
+            try
+            {
+                // Create a simple test PDF
+                var testPdf = new byte[] { 0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34 }; // Simple PDF header
+                
+                // Send test email
+                await _emailService.SendPrescriptionEmailAsync(
+                    emailRequest.ToEmail,
+                    emailRequest.ToName ?? "Test User",
+                    "Test Patient",
+                    "Test Doctor",
+                    DateTime.Now,
+                    testPdf);
+
+                return Ok(new { message = "Test email processed successfully", sentTo = emailRequest.ToEmail });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while sending test email");
+                return StatusCode(500, $"Failed to send test email: {ex.Message}");
+            }
+        }
+
     }
 }
