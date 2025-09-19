@@ -1,0 +1,9 @@
+{
+  "patientId": 1,
+  "doctorId": 1,
+  "appointmentDate": "2025-09-18T10:00:00",
+  "visitType": "Regular Checkup",
+  "status": "Scheduled",
+  "notes": "Annual physical examination",
+  "prescriptionDetails": []
+}

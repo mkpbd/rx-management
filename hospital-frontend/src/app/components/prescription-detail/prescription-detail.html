@@ -1,0 +1,318 @@
+<div class="prescription-detail-container">
+  <mat-card class="prescription-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>medication</mat-icon>
+        Prescription Details
+        <mat-chip class="medicine-count" *ngIf="hasPrescriptionDetails()">
+          {{ getTotalMedicines() }} medicine(s)
+        </mat-chip>
+        <span class="title-spacer"></span>
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="onGeneratePrescriptionPDF()"
+          *ngIf="hasPrescriptionDetails()"
+          class="pdf-button">
+          <mat-icon>picture_as_pdf</mat-icon>
+          Generate PDF
+        </button>
+      </mat-card-title>
+      <mat-card-subtitle>
+        Add and manage prescribed medicines for this appointment
+        <span *ngIf="hasPrescriptionDetails()" class="total-cost">
+          Total Cost: ${{ calculateTotalCost().toFixed(2) }}
+        </span>
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Medicine Addition Form -->
+      <div class="medicine-form-section">
+        <h3>{{ isEditMode ? 'Edit Medicine' : 'Add Medicine' }}</h3>
+
+        <form [formGroup]="medicineForm" class="medicine-form">
+          <!-- Category Filter -->
+          <div class="form-row category-filter">
+            <mat-form-field appearance="outline" class="category-select">
+              <mat-label>Filter by Category</mat-label>
+              <mat-select formControlName="category" (selectionChange)="onCategoryFilterChange()">
+                <mat-option value="">All Categories</mat-option>
+                <mat-option *ngFor="let cat of categories" [value]="cat">
+                  {{ cat }}
+                </mat-option>
+              </mat-select>
+              <mat-icon matSuffix>category</mat-icon>
+            </mat-form-field>
+            <button
+              mat-button
+              type="button"
+              (click)="clearCategoryFilter()"
+              *ngIf="selectedCategory"
+              class="clear-filter-btn">
+              <mat-icon>clear</mat-icon>
+              Clear Filter
+            </button>
+          </div>
+
+          <!-- Medicine Search -->
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="medicine-search">
+              <mat-label>Search Medicine *</mat-label>
+              <input
+                matInput
+                formControlName="medicineSearch"
+                placeholder="Type to search medicines..."
+                [matAutocomplete]="medicineAuto"
+                required>
+              <mat-icon matSuffix>search</mat-icon>
+              <mat-autocomplete
+                #medicineAuto="matAutocomplete"
+                [displayWith]="displayMedicine"
+                (optionSelected)="onMedicineSelected($event.option.value)">
+                <mat-option *ngFor="let medicine of filteredMedicines | async" [value]="medicine">
+                  <div class="medicine-option">
+                    <div class="medicine-name">
+                      {{ medicine.name }}
+                      <span class="strength" *ngIf="medicine.strength">({{ medicine.strength }})</span>
+                    </div>
+                    <div class="medicine-details">
+                      {{ medicine.category }} - {{ medicine.manufacturer }}
+                      <span class="price" *ngIf="medicine.price"> - ${{ medicine.price.toFixed(2) }}</span>
+                    </div>
+                  </div>
+                </mat-option>
+                <mat-option *ngIf="(filteredMedicines | async)?.length === 0" disabled>
+                  No medicines found
+                </mat-option>
+              </mat-autocomplete>
+              <mat-error *ngIf="medicineSearch?.hasError('required') && medicineSearch?.touched">
+                Medicine selection is required
+              </mat-error>
+              <mat-progress-spinner
+                *ngIf="isLoadingMedicines"
+                matSuffix
+                diameter="20"
+                mode="indeterminate">
+              </mat-progress-spinner>
+            </mat-form-field>
+
+            <!-- Dosage Field with Quick Buttons -->
+            <mat-form-field appearance="outline" class="dosage-field">
+              <mat-label>Dosage *</mat-label>
+              <input
+                matInput
+                formControlName="dosage"
+                placeholder="e.g., 500mg, 1 tablet"
+                required>
+              <mat-icon matSuffix>local_pharmacy</mat-icon>
+              <mat-hint>Format: number + unit (mg, g, ml, tablet, etc.)</mat-hint>
+              <mat-error *ngIf="dosage?.hasError('required') && dosage?.touched">
+                Dosage is required
+              </mat-error>
+              <mat-error *ngIf="dosage?.hasError('pattern') && dosage?.touched">
+                Invalid dosage format (e.g., "500mg" or "1 tablet")
+              </mat-error>
+            </mat-form-field>
+          </div>
+
+          <!-- Quick Dosage Buttons -->
+          <div class="quick-dosage-buttons">
+            <span class="quick-label">Quick Dosage:</span>
+            <button
+              mat-button
+              type="button"
+              *ngFor="let dose of ['1 tablet', '2 tablets', '500mg', '1000mg', '5ml', '10ml']"
+              (click)="onQuickDosage(dose)"
+              class="quick-btn">
+              {{ dose }}
+            </button>
+          </div>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="frequency-field">
+              <mat-label>Frequency *</mat-label>
+              <mat-select formControlName="frequency" required>
+                <mat-option *ngFor="let freq of frequencies" [value]="freq">
+                  {{ freq }}
+                </mat-option>
+              </mat-select>
+              <mat-icon matSuffix>schedule</mat-icon>
+              <mat-error *ngIf="frequency?.hasError('required') && frequency?.touched">
+                Frequency is required
+              </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="duration-field">
+              <mat-label>Duration *</mat-label>
+              <mat-select formControlName="duration" required>
+                <mat-option *ngFor="let dur of durations" [value]="dur">
+                  {{ dur }}
+                </mat-option>
+              </mat-select>
+              <mat-icon matSuffix>calendar_today</mat-icon>
+              <mat-error *ngIf="duration?.hasError('required') && duration?.touched">
+                Duration is required
+              </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="quantity-field">
+              <mat-label>Quantity *</mat-label>
+              <input
+                matInput
+                type="number"
+                formControlName="quantity"
+                min="1"
+                max="1000"
+                required>
+              <mat-icon matSuffix>inventory</mat-icon>
+              <mat-error *ngIf="quantity?.hasError('required') && quantity?.touched">
+                Quantity is required
+              </mat-error>
+              <mat-error *ngIf="quantity?.hasError('min') && quantity?.touched">
+                Quantity must be at least 1
+              </mat-error>
+              <mat-error *ngIf="quantity?.hasError('max') && quantity?.touched">
+                Quantity cannot exceed 1000
+              </mat-error>
+            </mat-form-field>
+          </div>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="instructions-field">
+              <mat-label>Special Instructions</mat-label>
+              <textarea
+                matInput
+                formControlName="instructions"
+                rows="2"
+                placeholder="e.g., Take with food, Before meals, etc."
+                maxlength="500">
+              </textarea>
+              <mat-icon matSuffix>info</mat-icon>
+              <mat-hint>{{ instructions?.value?.length || 0 }}/500</mat-hint>
+              <mat-error *ngIf="instructions?.hasError('maxlength')">
+                Instructions cannot exceed 500 characters
+              </mat-error>
+            </mat-form-field>
+          </div>
+
+          <div class="form-actions">
+            <button
+              mat-button
+              type="button"
+              (click)="onCancelEdit()"
+              *ngIf="isEditMode"
+              class="cancel-button">
+              <mat-icon>cancel</mat-icon>
+              Cancel
+            </button>
+
+            <button
+              mat-raised-button
+              color="primary"
+              type="button"
+              (click)="onAddMedicine()"
+              [disabled]="medicineForm.invalid"
+              class="add-button">
+              <mat-icon>{{ isEditMode ? 'save' : 'add' }}</mat-icon>
+              {{ isEditMode ? 'Update Medicine' : 'Add Medicine' }}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Prescription Details Table -->
+      <div class="prescription-table-section" *ngIf="hasPrescriptionDetails()">
+        <h3>Prescribed Medicines</h3>
+
+        <div class="table-container">
+          <table mat-table [dataSource]="dataSource" class="prescription-table">
+            <!-- Medicine Column -->
+            <ng-container matColumnDef="medicine">
+              <th mat-header-cell *matHeaderCellDef>Medicine</th>
+              <td mat-cell *matCellDef="let prescription">
+                <div class="medicine-info">
+                  <div class="medicine-name">{{ prescription.medicineName }}</div>
+                  <div class="medicine-details">{{ getMedicineDetails(prescription.medicineId) }}</div>
+                </div>
+              </td>
+            </ng-container>
+
+            <!-- Dosage Column -->
+            <ng-container matColumnDef="dosage">
+              <th mat-header-cell *matHeaderCellDef>Dosage</th>
+              <td mat-cell *matCellDef="let prescription">
+                <span class="dosage-info">{{ prescription.dosage }}</span>
+              </td>
+            </ng-container>
+
+            <!-- Frequency Column -->
+            <ng-container matColumnDef="frequency">
+              <th mat-header-cell *matHeaderCellDef>Frequency</th>
+              <td mat-cell *matCellDef="let prescription">
+                <mat-chip class="frequency-chip">{{ prescription.frequency }}</mat-chip>
+              </td>
+            </ng-container>
+
+            <!-- Duration Column -->
+            <ng-container matColumnDef="duration">
+              <th mat-header-cell *matHeaderCellDef>Duration</th>
+              <td mat-cell *matCellDef="let prescription">
+                <span class="duration-info">{{ prescription.duration }}</span>
+              </td>
+            </ng-container>
+
+            <!-- Quantity Column -->
+            <ng-container matColumnDef="quantity">
+              <th mat-header-cell *matHeaderCellDef>Qty</th>
+              <td mat-cell *matCellDef="let prescription">
+                <span class="quantity-info">{{ prescription.quantity }}</span>
+              </td>
+            </ng-container>
+
+            <!-- Instructions Column -->
+            <ng-container matColumnDef="instructions">
+              <th mat-header-cell *matHeaderCellDef>Instructions</th>
+              <td mat-cell *matCellDef="let prescription">
+                <span class="instructions-info" [matTooltip]="prescription.instructions">
+                  {{ prescription.instructions || 'No special instructions' }}
+                </span>
+              </td>
+            </ng-container>
+
+            <!-- Actions Column -->
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <td mat-cell *matCellDef="let prescription; let i = index">
+                <button
+                  mat-icon-button
+                  color="primary"
+                  (click)="onEditMedicine(i)"
+                  matTooltip="Edit Medicine">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  color="warn"
+                  (click)="onDeleteMedicine(i)"
+                  matTooltip="Remove Medicine">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="!hasPrescriptionDetails()">
+        <mat-icon>medication</mat-icon>
+        <h3>No medicines prescribed yet</h3>
+        <p>Use the form above to add medicines to this prescription</p>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

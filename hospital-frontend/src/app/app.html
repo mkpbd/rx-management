@@ -1,0 +1,48 @@
+<!-- Hospital Management System Layout -->
+
+<style>
+  :host {
+    font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .hospital-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #fafafa;
+  }
+
+  .main-content {
+    flex: 1;
+    padding: 24px;
+    background-color: #fafafa;
+    overflow: auto;
+  }
+
+  .content-wrapper {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+    min-height: calc(100vh - 120px);
+  }
+
+  @media screen and (max-width: 768px) {
+    .main-content {
+      padding: 16px;
+    }
+  }
+</style>
+
+<div class="hospital-layout">
+  <app-navigation></app-navigation>
+
+  <main class="main-content">
+    <div class="content-wrapper">
+      <router-outlet></router-outlet>
+    </div>
+  </main>
+</div>
